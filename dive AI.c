@@ -109,11 +109,19 @@ void updateSeeds(diveState *myState)
 			myState->submaxTile = vals[i];
 
 		for (uint32_t j = 0; j < myState->numSeeds; ++j)
-			while (vals[i] % myState->seeds[j] == 0)
+		{
+		    uint32_t r;
+            uint32_t q;
+            r = vals[i] % myState->seeds[j];
+            q = vals[i] / myState->seeds[j];
+			while (r == 0)
 			{
-				vals[i] /= myState->seeds[j];
-				active |= 1 << j;
+                vals[i] = q;
+                active |= 1 << j;
+                r = vals[i] % myState->seeds[j];
+                q = vals[i] / myState->seeds[j];
 			}
+		}
 	}
 
 	uint32_t seed;
@@ -250,14 +258,13 @@ diveState *spawnOptions(diveState myState, uint32_t *numOptions)
 	return dest;
 }
 
-diveState newSpawn(diveState myState, uint32_t *rng)
+void newSpawn(diveState *myState, uint32_t *rng)
 {
 	uint32_t numOptions;
-	diveState *options = spawnOptions(myState, &numOptions);
+	diveState *options = spawnOptions(*myState, &numOptions);
 	*rng = rand() % numOptions;
-	diveState ret = options[*rng];
+	*myState = options[*rng];
 	free(options);
-	return ret;
 }
 
 
@@ -461,8 +468,8 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove)
 	game = (diveState) {{0}, {2}, 1, 0, 2, 2, 0, 16, false};
 	*nthMove = 0;
 	summary = malloc(MAX_NUM_MOVES * sizeof *summary);
-	game = newSpawn(game, summary + (*nthMove)++);
-	game = newSpawn(game, summary + (*nthMove)++);
+	newSpawn(&game, summary + (*nthMove)++);
+	newSpawn(&game, summary + (*nthMove)++);
 	updateSeeds(&game);
 
 	diveState tmp = game;
@@ -523,6 +530,7 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove)
 		++(*nthMove);
 		free(temp.leaves);
 	}
+	printBoard(game);
 
 	(*score) = game.score;
 	return summary;
@@ -531,7 +539,7 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove)
 
 
 
-static uint32_t NGAMES = 4000;
+static uint32_t NGAMES = 40;
 
 int main()
 {

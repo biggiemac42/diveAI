@@ -558,6 +558,7 @@ int main(int argc, char **argv)
 				break;
 				case 'd': // AI depth
 				depth = atoi(argv[++i]);
+				break;
 				case 's': // Seed
 				seed = atoi(argv[++i]);
 				break;

@@ -12,3 +12,5 @@ expected fitness.  Default depth is 2.
 The game may be set to a given seed for consistent results, default seed is
 `time(NULL)`.
 If the verbosity flag is set, the board is printed after every move.
+
+Code is public under MIT public license

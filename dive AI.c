@@ -21,7 +21,7 @@
  */
 
 /* allow up to 29 seeds but only use the first numSeeds elements of the list in practice */
-/* 22 is so that sizeof a lookahead tree struct (later) is 192 bytes, which is a nice number */
+/* 21 is so that sizeof a lookahead tree struct (later) is 192 bytes, which is a nice number */
 
 typedef struct ds {
 	uint32_t board[16];
@@ -108,8 +108,10 @@ void updateSeeds(diveState *myState)
 		else if (vals[i] > myState->submaxTile)
 			myState->submaxTile = vals[i];
 
-		for (uint32_t j = 0; j < myState->numSeeds; ++j)
+		for (uint32_t j = 0, flag = 1; j < myState->numSeeds; ++j, flag <<=1)
 		{
+			if (vals[i] < myState->seeds[j])
+				continue;
 		    uint32_t r;
             uint32_t q;
             r = vals[i] % myState->seeds[j];
@@ -117,7 +119,7 @@ void updateSeeds(diveState *myState)
 			while (r == 0)
 			{
                 vals[i] = q;
-                active |= 1 << j;
+                active |= flag;
                 r = vals[i] % myState->seeds[j];
                 q = vals[i] / myState->seeds[j];
 			}
@@ -448,12 +450,11 @@ static uint32_t MAX_NUM_MOVES = 10000;
  * depth 1, 1000 games in ~an hour at depth 2.  Haven't completed
  * a game at depth 3 yet.
  */
-static uint32_t DEPTH = 2;
 
 /* Returns the intlist directly, and score and number of moves
  * indirectly.
  */
-uint32_t *playGame(uint32_t *score, uint32_t *nthMove)
+uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verbose)
 {
 	uint32_t *summary;
 	diveState game;
@@ -490,7 +491,7 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove)
 		bestFitness = -1.0;
 		for (uint32_t i = 0; i < 4; ++i)
 		{
-			computeToDepth(&myTree[i], DEPTH);
+			computeToDepth(&myTree[i], depth);
 			fitness[i] = evaluateTree(myTree + i);
 			if (fitness[i] > bestFitness)
 			{
@@ -512,7 +513,9 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove)
 		summary[*nthMove] = rand() % numOptions;
 		game = options[summary[*nthMove]];
 		free(options);
-		printBoard(game);
+
+		if (verbose)
+			printBoard(game);
 
 		for (uint32_t i = 0; i < numOptions; ++i)
 			if (i != summary[*nthMove])
@@ -530,20 +533,46 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove)
 		++(*nthMove);
 		free(temp.leaves);
 	}
-	printBoard(game);
+	if (verbose)
+		printBoard(game);
 
 	(*score) = game.score;
 	return summary;
 }
 
-
-
-
-static uint32_t NGAMES = 40;
-
-int main()
+int main(int argc, char **argv)
 {
-	srand(time(NULL));
+	uint32_t ngames = 10;
+	uint32_t depth = 2;
+	uint32_t seed = time(NULL);
+	bool verbose = true;
+
+	for (int i = 1; i < argc; ++i)
+	{
+		if (argv[i][0] == '-')
+		{
+			switch (argv[i][1])
+			{
+				case 'n': // Num games
+				ngames = atoi(argv[++i]);
+				break;
+				case 'd': // AI depth
+				depth = atoi(argv[++i]);
+				case 's': // Seed
+				seed = atoi(argv[++i]);
+				break;
+				case 'v': // Verbosity
+				verbose = true;
+				break;
+				default:
+				printf("Usage: %s [-n ngames] [-d depth] [-s seed] [-v]", argv[0]);
+				return 0;
+			}
+		}
+	}
+
+
+	srand(seed);
 	uint32_t aiScore = 0;
 	uint32_t aiHighScore = 0;
 	uint32_t n10k = 0;
@@ -551,22 +580,30 @@ int main()
 	uint32_t score;
 	uint32_t nthMove;
 	
-	for (int g = 0; g < NGAMES; ++g)
+	for (int g = 0; g < ngames; ++g)
 	{
-		summary = playGame(&score, &nthMove);
-		//for (uint32_t i = 0; i < nthMove; ++i)
-		//	printf("%d\n", (*summary)[i]);
+		summary = playGame(&score, &nthMove, depth, verbose);
 
 		aiScore += score;
 		aiHighScore = (aiHighScore > score) ? aiHighScore : score;
 		if (score > 10000)
 			++n10k;
+		if (score > 100000)
+		{
+			char filename[32];
+			sprintf(filename, "Game%d.txt", score);
+			FILE *f = fopen(filename, "w");
+			for (uint32_t i = 0; i < nthMove; ++i)
+				fprintf(f, "%d\n", summary[i]);
+			fclose(f);
+		}
+
 		free(summary);
 	}
 
-	printf("Mean : %d\n",aiScore / NGAMES);
-	printf("Highest: %d\n",aiHighScore);
-	printf("10K games: %d / %d", n10k, NGAMES);
+	printf("Mean : %d\n", aiScore / ngames);
+	printf("Highest: %d\n", aiHighScore);
+	printf("10K games: %d / %d", n10k, ngames);
 
 	return 0;
 }

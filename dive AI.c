@@ -545,7 +545,7 @@ int main(int argc, char **argv)
 	uint32_t ngames = 10;
 	uint32_t depth = 2;
 	uint32_t seed = time(NULL);
-	bool verbose = true;
+	bool verbose = false;
 
 	for (int i = 1; i < argc; ++i)
 	{

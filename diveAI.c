@@ -547,28 +547,28 @@ int main(int argc, char **argv)
 	uint32_t seed = time(NULL);
 	bool verbose = false;
 
-	for (int i = 1; i < argc; ++i)
-	{
-		if (argv[i][0] == '-')
-		{
-			switch (argv[i][1])
-			{
-				case 'n': // Num games
-				ngames = atoi(argv[++i]);
-				break;
-				case 'd': // AI depth
-				depth = atoi(argv[++i]);
-				break;
-				case 's': // Seed
-				seed = atoi(argv[++i]);
-				break;
-				case 'v': // Verbosity
-				verbose = true;
-				break;
-				default:
-				printf("Usage: %s [-n ngames] [-d depth] [-s seed] [-v]", argv[0]);
-				return 0;
-			}
+	char opt;
+
+	while ((opt=getopt(argc,argv,"n:d:s:v"))!=-1) {
+        switch (opt)
+        {
+            case 'n': // Num games
+                ngames = atoi(optarg);
+            break;
+            case 'd': // AI depth
+                depth = atoi(optarg);
+            break;
+            case 's': // Seed
+                seed = atoi(optarg);
+            break;
+            case 'v': // Verbosity
+                verbose = true;
+            break;
+            case '?':
+                return 1;
+            default:
+                printf("Usage: %s [-n ngames] [-d depth] [-s seed] [-v]", argv[0]);
+                return 0;
 		}
 	}
 

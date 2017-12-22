@@ -78,6 +78,8 @@ uint32_t getIndex(uint32_t index, dirType dir)
 		return ~index & 15;
 		case Up:
 		return ~board90[index] & 15;
+		default:
+		return 0; // Never happens
 	}
 }
 
@@ -497,7 +499,8 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove)
 		for (uint32_t i = 0; i < 4; ++i)
 			if (i != myMove)
 				freeNode(myTree[i]);
-			options = spawnOptions(temp.myState, &numOptions);
+		
+		options = spawnOptions(temp.myState, &numOptions);
 		++(*nthMove);
 		summary[*nthMove] = rand() % numOptions;
 		game = options[summary[*nthMove]];
@@ -530,7 +533,7 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove)
 
 static uint32_t NGAMES = 4000;
 
-uint32_t main()
+int main()
 {
 	srand(time(NULL));
 	uint32_t aiScore = 0;

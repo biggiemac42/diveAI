@@ -21,22 +21,42 @@
  */
 
 /* allow up to 29 seeds but only use the first numSeeds elements of the list in practice */
-/* 26 is so that sizeof a lookahead tree struct (later) is 192 bytes, which is a nice number */
+/* 22 is so that sizeof a lookahead tree struct (later) is 192 bytes, which is a nice number */
 
 typedef struct ds {
 	uint32_t board[16];
-	uint32_t seeds[26];
+	uint32_t seeds[21];
 	uint32_t numSeeds;
 	uint32_t score;
 
 	// Important info for evaluation function is carried by the diveState
-
-	uint8_t biggestSeed;
-	uint8_t secondBiggestSeed;
+	uint32_t maxTile;
+	uint32_t submaxTile;
+	uint32_t biggestSeed;
+	uint32_t secondBiggestSeed;
 	uint8_t emptyTiles;
 	
 	bool gameOver;
 } diveState;
+
+void printBoard(diveState myState)
+{
+	printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\nScore: %d\n\n", myState.score);
+	printf("Seeds: ");
+	for (uint32_t i = 0; i < myState.numSeeds; ++i)
+		printf("%d ", myState.seeds[i]);
+
+
+	printf("\n");
+	for (uint32_t i = 0; i < 16; ++i)
+	{
+		myState.board[i] ? printf("%7d ", myState.board[i]) : printf("      . ");
+		if (i % 4 == 3)
+			printf("\n");
+	}
+	printf("\n");
+	//printf("Max tiles: %d, %d\nMax seeds: %d, %d\n", myState.maxTile, myState.submaxTile, myState.biggestSeed, myState.secondBiggestSeed);
+}
 
 typedef enum {
 	Up,
@@ -67,10 +87,26 @@ void updateSeeds(diveState *myState)
 	uint32_t active = 0;
 	uint32_t vals[16] = {0};
 
+	myState->submaxTile = 0;
+	myState->maxTile = 0;
+
 	for (uint32_t i = 0; i < 16; ++i)
 	{
+
 		vals[i] = myState->board[i];
-		for (uint32_t j = 0; j < myState->numSeeds && vals[i] > 1; ++j)
+
+		if (!vals[i])
+			continue;
+
+		if (vals[i] > myState->maxTile)
+		{
+			myState->submaxTile = myState->maxTile;
+			myState->maxTile = vals[i];
+		}
+		else if (vals[i] > myState->submaxTile)
+			myState->submaxTile = vals[i];
+
+		for (uint32_t j = 0; j < myState->numSeeds; ++j)
 			while (vals[i] % myState->seeds[j] == 0)
 			{
 				vals[i] /= myState->seeds[j];
@@ -222,22 +258,7 @@ diveState newSpawn(diveState myState, uint32_t *rng)
 	return ret;
 }
 
-void printBoard(diveState myState)
-{
-	printf("Seeds: ");
-	for (uint32_t i = 0; i < myState.numSeeds; ++i)
-		printf("%d ", myState.seeds[i]);
 
-
-	printf("\n");
-	for (uint32_t i = 0; i < 16; ++i)
-	{
-		myState.board[i] ? printf("%7d ", myState.board[i]) : printf("      . ");
-		if (i % 4 == 3)
-			printf("\n");
-	}
-	printf("\n");
-}
 
 /* The AI is one player in an unbalanced two-player game
  *
@@ -361,18 +382,30 @@ void computeToDepth(lookaheadTree *root, uint32_t depth)
  * would improve performance greatly.
  */
 
+/* Attempt to give a tremendous boost to 89 and company, but only if the seed is alone */
+uint32_t rateMySeeds(uint32_t biggestSeed, uint32_t secondBiggestSeed)
+{
+	if (biggestSeed < 89)
+		return biggestSeed;
+	uint32_t ret =  (!((biggestSeed + 1) % 90) && secondBiggestSeed < 23) ?
+	                 biggestSeed * 10 : biggestSeed;
+	return ret;
+}
+
 float evaluate(diveState *myState)
 {
 	return (myState->gameOver) ? 0.0 : myState->score +
-	                                   3.0 * myState->biggestSeed +
-	                                   2.0 * (myState->biggestSeed - myState->secondBiggestSeed) +
-	                                   40.0 * myState->emptyTiles +
+	 								   3.0 * rateMySeeds(myState->biggestSeed, myState->secondBiggestSeed) +
+	 								   ((myState->maxTile % myState->biggestSeed) ? 0.0 : 300.0) +
+	 								   ((myState->submaxTile) ? 10.0 * myState->maxTile / myState->submaxTile : 100) +
+	 								   ((myState->secondBiggestSeed) ? 10.0 * myState->biggestSeed / myState->secondBiggestSeed : 100) +
+	                                   70.0 * myState->emptyTiles +
 	                                   3100.0 / myState->numSeeds;
 }
 
 float evaluateTree(lookaheadTree *node)
 {
-	if (!node->numLeaves)
+	if (node->numLeaves == 0)
 		return evaluate(&(node->myState));
 
 	float upScore = 0;
@@ -380,19 +413,19 @@ float evaluateTree(lookaheadTree *node)
 	float downScore = 0;
 	float leftScore = 0;
 
-	for (uint32_t i = 0; i < node->numLeaves;)
+	for (uint32_t i = 0; i < node->numLeaves; i += 4)
 	{
-		upScore += evaluateTree(node->leaves + i++);
-		rightScore += evaluateTree(node->leaves + i++);
-		downScore += evaluateTree(node->leaves + i++);
-		leftScore += evaluateTree(node->leaves + i++);
+		upScore += evaluateTree(node->leaves + i);
+		rightScore += evaluateTree(node->leaves + i + 1);
+		downScore += evaluateTree(node->leaves + i + 2);
+		leftScore += evaluateTree(node->leaves + i + 3);
 	}
 
 	float udMax = (upScore > downScore)  ? upScore : downScore;
 	float lrMax = (leftScore > rightScore)  ? leftScore : rightScore;
 	float hvMax = (udMax > lrMax) ? udMax : lrMax;
 
-	return hvMax / node->numLeaves * 4;
+	return hvMax / node->numLeaves;
 }
 
 
@@ -423,11 +456,12 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove)
 	dirType myMove;
 	uint32_t numOptions;
 
-	game = (diveState) {{0}, {2}, 1, 0, false};
+	game = (diveState) {{0}, {2}, 1, 0, 2, 2, 0, 16, false};
 	*nthMove = 0;
 	summary = malloc(MAX_NUM_MOVES * sizeof *summary);
 	game = newSpawn(game, summary + (*nthMove)++);
 	game = newSpawn(game, summary + (*nthMove)++);
+	updateSeeds(&game);
 
 	diveState tmp = game;
 	shift(&tmp, Up);
@@ -468,7 +502,7 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove)
 		summary[*nthMove] = rand() % numOptions;
 		game = options[summary[*nthMove]];
 		free(options);
-		//printBoard(game);
+		printBoard(game);
 
 		for (uint32_t i = 0; i < numOptions; ++i)
 			if (i != summary[*nthMove])
@@ -494,7 +528,7 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove)
 
 
 
-static uint32_t NGAMES = 10;
+static uint32_t NGAMES = 4000;
 
 uint32_t main()
 {
@@ -512,7 +546,6 @@ uint32_t main()
 		//for (uint32_t i = 0; i < nthMove; ++i)
 		//	printf("%d\n", (*summary)[i]);
 
-		printf("%d\n", score);
 		aiScore += score;
 		aiHighScore = (aiHighScore > score) ? aiHighScore : score;
 		if (score > 10000)

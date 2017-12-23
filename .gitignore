@@ -1,5 +1,7 @@
 # Exclude text files, the executable, and other side effects of compilation
 
 diveAI
+replay
 *.txt
 *.STACKDUMP
+src/*.o

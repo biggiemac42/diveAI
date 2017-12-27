@@ -1,6 +1,7 @@
 #include "dive.h"
 
 #include <stdio.h>
+#include <windows.h>
 
 int main(int argc, char **argv)
 {
@@ -38,6 +39,7 @@ int main(int argc, char **argv)
 			return 1;
 		game = options[spawn];
 		printBoard(game);
+		Sleep(400);
 	}
 	fclose(f);
 }

@@ -1,7 +1,17 @@
-#include "dive.h"
+/* The following is needed for a `Sleep()` implementation.
+ * `_DEFAULT_SOURCE` has to be defined before any system include's */
+
+#ifdef  _WIN32
+# include <windows.h>
+#else /* unix */
+# define _DEFAULT_SOURCE
+# include <unistd.h>
+# define Sleep(x) usleep((x)*1000)
+#endif
 
 #include <stdio.h>
-#include <windows.h>
+
+#include "dive.h"
 
 int main(int argc, char **argv)
 {

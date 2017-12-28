@@ -184,6 +184,7 @@ void shift(diveState *myState, dirType dir)
 }
 
 /* Explicitly returns the list of options, returns by pointer the number of them */
+/* Return value of this function must be freed */
 diveState *spawnOptions(diveState myState, uint32_t *numOptions)
 {
 	if (myState.gameOver)

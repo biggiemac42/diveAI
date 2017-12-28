@@ -41,7 +41,7 @@ typedef struct lt {
 	uint32_t numLeaves;
 } lookaheadTree;
 
-void freeNode(lookaheadTree node);
+void freeNode(lookaheadTree *node);
 void addChildren(lookaheadTree *parent);
 void computeToDepth(lookaheadTree *root, uint32_t depth);
 uint32_t rateMySeeds(uint32_t biggestSeed, uint32_t secondBiggestSeed);

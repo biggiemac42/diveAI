@@ -1,17 +1,17 @@
 #include "AI.h"
 
 //#include <stdio.h> // debugging
-#include <math.h> // sqrt
+//#include <math.h> // sqrt
 
 /* We will be doing heap allocations, so all eliminated branches will
  * need to be freed from the leaves up.  Define a recursive free:
  */
 
-void freeNode(lookaheadTree node)
+void freeNode(lookaheadTree *node)
 {
-	for (uint32_t i = 0; i < node.numLeaves; ++i)
-		freeNode(node.leaves[i]);
-	free(node.leaves);
+	for (uint32_t i = 0; i < node->numLeaves; ++i)
+		freeNode(node->leaves + i);
+	free(node->leaves);
 }
 
 /* promote a leaf to a node by computing its children.  If called
@@ -197,7 +197,6 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verb
 	bool cleaning;
 	uint32_t myDepth;
 
-	//game = (diveState) {{0, 0, 0, 11, 0, 0, 0, 2, 0, 0, 2, 2, 0, 0, 0, 818}, {2, 11, 409}, 3, 818, 11, 409, 11, 11, false};
 	game = (diveState) {{0}, {2}, 1, 2, 2, 2, 0, 16, false};
 	*nthMove = 0;
 	summary = malloc(MAX_NUM_MOVES * sizeof *summary);
@@ -226,7 +225,7 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verb
 			myDepth = depth + 1;
 		else
 			myDepth = depth + 2;
-		
+
 		bestFitness = -1.0;
 		for (uint32_t i = 0; i < 4; ++i)
 		{
@@ -250,7 +249,7 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verb
 		// Prune unused branches - no memory leaks pls
 		for (uint32_t i = 0; i < 4; ++i)
 			if (i != myMove)
-				freeNode(myTree[i]);
+				freeNode(myTree + i);
 
 		
 		options = spawnOptions(temp.myState, &numOptions);
@@ -262,15 +261,15 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verb
 		if (verbose)
 			printBoard(game);
 
-		if (depth > 0)
+		if (myDepth > 0)
 		{
 			for (uint32_t i = 0; i < numOptions; ++i)
 				if (i != summary[*nthMove])
 				{
-					freeNode(temp.leaves[4*i]);
-					freeNode(temp.leaves[4*i+1]);
-					freeNode(temp.leaves[4*i+2]);
-					freeNode(temp.leaves[4*i+3]);
+					freeNode(temp.leaves + 4*i);
+					freeNode(temp.leaves + 4*i + 1);
+					freeNode(temp.leaves + 4*i + 2);
+					freeNode(temp.leaves + 4*i + 3);
 				}
 
 			myTree[Up] = temp.leaves[4*summary[*nthMove]];

@@ -65,7 +65,7 @@ int main(int argc, char **argv)
 		aiHighScore = (aiHighScore > score) ? aiHighScore : score;
 		if (score > 10000)
 			++n10k;
-		if (score > 100000)
+		if (score > 1000000)
 		{
 			char filename[32];
 			sprintf(filename, "Game%d.txt", score);

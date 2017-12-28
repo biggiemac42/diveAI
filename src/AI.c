@@ -222,9 +222,9 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verb
 		if (game.score < 10000)
 			myDepth = depth;
 		else if (game.score < 100000)
-			myDepth = depth + 1;
+			myDepth = (depth > 1) ? depth : 1;
 		else
-			myDepth = depth + 2;
+			myDepth = (depth > 2) ? depth : 2;
 
 		bestFitness = -1.0;
 		for (uint32_t i = 0; i < 4; ++i)

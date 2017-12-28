@@ -1,6 +1,7 @@
 #include "AI.h"
 
-#include <stdio.h> // debugging
+//#include <stdio.h> // debugging
+#include <math.h> // sqrt
 
 /* We will be doing heap allocations, so all eliminated branches will
  * need to be freed from the leaves up.  Define a recursive free:
@@ -86,14 +87,28 @@ void computeToDepth(lookaheadTree *root, uint32_t depth)
  * would improve performance greatly.
  */
 
-/* Attempt to give a tremendous boost to 89 and company, but only if the seed is alone */
+
+uint32_t gcd(uint32_t a, uint32_t b)
+{
+	uint32_t r;
+	while (b!=0)
+	{
+		r = a % b;
+		a = b;
+		b = r;
+	}
+	return a;
+}
+/* Attempt to give a boost to a particular class of large seeds
+ * but only if the seed is alone */
 uint32_t rateMySeeds(uint32_t biggestSeed, uint32_t secondBiggestSeed)
 {
-	if (biggestSeed < 89)
+	//if (biggestSeed < 89)
 		return biggestSeed;
-	uint32_t ret =  (!((biggestSeed + 1) % 90) && secondBiggestSeed < 23) ?
-	                 biggestSeed * 10 : biggestSeed;
-	return ret;
+	//uint32_t mygcd = gcd(biggestSeed + 1, 36288000);
+	//uint32_t ret =  (mygcd > 89 && secondBiggestSeed < 23) ?
+	//                 biggestSeed * 1.4 : biggestSeed;
+	//return ret;
 }
 
 float evaluate(diveState *myState, bool cleaning)
@@ -101,11 +116,10 @@ float evaluate(diveState *myState, bool cleaning)
 	if (myState->gameOver)
 		return 0.0;
 	else if (cleaning)
-		return 70.0 * myState->emptyTiles + 3100 / myState->numSeeds;
+		return 100.0 * myState->emptyTiles + 3100 / myState->numSeeds;
 	else
 		return myState->score +
-			   3.0 * rateMySeeds(myState->biggestSeed, myState->secondBiggestSeed) +
-	 		   ((myState->maxTile % myState->biggestSeed) ? 0.0 : 300.0) +
+			   2.5 * rateMySeeds(myState->biggestSeed, myState->secondBiggestSeed) +
 	 		   ((myState->submaxTile) ? 10.0 * myState->maxTile / myState->submaxTile : 100) +
 	 		   ((myState->secondBiggestSeed) ? 10.0 * myState->biggestSeed / myState->secondBiggestSeed : 100) +
 	           70.0 * myState->emptyTiles +
@@ -181,6 +195,7 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verb
 	dirType myMove;
 	uint32_t numOptions;
 	bool cleaning;
+	uint32_t myDepth;
 
 	//game = (diveState) {{0, 0, 0, 11, 0, 0, 0, 2, 0, 0, 2, 2, 0, 0, 0, 818}, {2, 11, 409}, 3, 818, 11, 409, 11, 11, false};
 	game = (diveState) {{0}, {2}, 1, 2, 2, 2, 0, 16, false};
@@ -205,13 +220,20 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verb
 
 	while(!game.gameOver)
 	{
+		if (game.score < 10000)
+			myDepth = depth;
+		else if (game.score < 100000)
+			myDepth = depth + 1;
+		else
+			myDepth = depth + 2;
+		
 		bestFitness = -1.0;
 		for (uint32_t i = 0; i < 4; ++i)
 		{
-			cleaning = myTree[i].myState.score < 777;
+			cleaning = myTree[i].myState.score < 626;
 			
-			if (depth > 0)
-				computeToDepth(myTree + i, depth);
+			if (myDepth > 0)
+				computeToDepth(myTree + i, myDepth);
 
 			fitness[i] = evaluateTree(myTree + i, cleaning);
 
@@ -255,7 +277,6 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verb
 			myTree[Right] = temp.leaves[4*summary[*nthMove]+1];
 			myTree[Down] = temp.leaves[4*summary[*nthMove]+2];
 			myTree[Left] = temp.leaves[4*summary[*nthMove]+3];
-			++(*nthMove);
 			free(temp.leaves);
 		}
 		else
@@ -273,6 +294,7 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verb
 			shift(&tmp, Left);
 			myTree[Left] = (lookaheadTree) {tmp, NULL, 0};
 		}
+		++(*nthMove);
 	}
 	if (verbose)
 		printBoard(game);

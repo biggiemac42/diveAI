@@ -41,12 +41,13 @@ typedef struct lt {
 	uint32_t numLeaves;
 } lookaheadTree;
 
+void populateHelpList();
+
 void freeNode(lookaheadTree *node);
 void addChildren(lookaheadTree *parent);
 void computeToDepth(lookaheadTree *root, uint32_t depth);
-uint32_t rateMySeeds(uint32_t biggestSeed, uint32_t secondBiggestSeed);
-float evaluate(diveState *myState, bool cleaning);
-float evaluateTree(lookaheadTree *node, bool cleaning);
+float evaluate(diveState *myState);
+float evaluateTree(lookaheadTree *node);
 uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verbose);
 
 #endif

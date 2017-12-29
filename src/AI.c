@@ -1,12 +1,60 @@
 #include "AI.h"
 
 //#include <stdio.h> // debugging
-//#include <math.h> // sqrt
+#include <math.h> // to have other options in eval
+
+
+/* The tuning knobs for the eval function are defined here as constants */
+
+/* Above this score the depth takes on a minumum of 1. */
+static uint32_t DEPTH_1_SCORE = 10000;
+
+/* Above this score the depth takes on a minimum of 2. */
+static uint32_t DEPTH_2_SCORE = 100000;
+
+
+/* The board's score when evaluated is the weighted sum of 4 quantities:
+ * number of empty tiles
+ * inverse seed count
+ *
+ * a function of biggest seed
+ * a function of score
+ */
+static float EMPTY_TILE_WEIGHT = 70.0;
+static float INV_SEED_COUNT_WEIGHT = 3100.0;
+static float BIGGEST_SEED_WEIGHT = 2.5;
+static float SCORE_WEIGHT = 1.0;
+
+/* The function for seed and score behavies linearly for small values and logarithmic
+ * asymptotically.  We precompute all values below 100k, and then call this function
+ * for higher values */
+
+float linloghelper(uint32_t value)
+{
+	float x = (float) value;
+	return 1000*(x/(x+1000) + log(x+1000) - log(1000));
+}
+
+static float linlogHelpList[100000];
+static bool listPopulated = false;
+
+void populateHelpList()
+{
+	for (int i = 0; i < 100000; ++i)
+		linlogHelpList[i] = linloghelper(i);
+	listPopulated = true;
+}
+
+float linlog(uint32_t value)
+{
+	return (listPopulated && value < 100000) ? linlogHelpList[value] : linloghelper(value);
+}
+
+
 
 /* We will be doing heap allocations, so all eliminated branches will
  * need to be freed from the leaves up.  Define a recursive free:
  */
-
 void freeNode(lookaheadTree *node)
 {
 	for (uint32_t i = 0; i < node->numLeaves; ++i)
@@ -99,51 +147,36 @@ uint32_t gcd(uint32_t a, uint32_t b)
 	}
 	return a;
 }
-/* Attempt to give a boost to a particular class of large seeds
- * but only if the seed is alone */
-uint32_t rateMySeeds(uint32_t biggestSeed, uint32_t secondBiggestSeed)
-{
-	//if (biggestSeed < 89)
-		return biggestSeed;
-	//uint32_t mygcd = gcd(biggestSeed + 1, 36288000);
-	//uint32_t ret =  (mygcd > 89 && secondBiggestSeed < 23) ?
-	//                 biggestSeed * 1.4 : biggestSeed;
-	//return ret;
-}
 
-float evaluate(diveState *myState, bool cleaning)
+float evaluate(diveState *myState)
 {
 	if (myState->gameOver)
 		return 0.0;
-	else if (cleaning)
-		return 100.0 * myState->emptyTiles + 3100 / myState->numSeeds;
 	else
-		return myState->score +
-			   2.5 * rateMySeeds(myState->biggestSeed, myState->secondBiggestSeed) +
-	 		   ((myState->submaxTile) ? 10.0 * myState->maxTile / myState->submaxTile : 100) +
-	 		   ((myState->secondBiggestSeed) ? 10.0 * myState->biggestSeed / myState->secondBiggestSeed : 100) +
-	           70.0 * myState->emptyTiles +
-	           3100.0 / myState->numSeeds;
+		return SCORE_WEIGHT * linlog(myState->score) +
+			   BIGGEST_SEED_WEIGHT * linlog(myState->biggestSeed) +
+	           EMPTY_TILE_WEIGHT * myState->emptyTiles +
+	           INV_SEED_COUNT_WEIGHT / myState->numSeeds;
 }
 
-float evaluateTree(lookaheadTree *node, bool cleaning)
+float evaluateTree(lookaheadTree *node)
 {
 	if (node->numLeaves == 0)
 	{
 		diveState tmp = node->myState;
 		shift(&tmp, Up);
-		float maxScore = evaluate(&tmp, cleaning);
+		float maxScore = evaluate(&tmp);
 		tmp = node->myState;
 		shift(&tmp, Right);
-		float tmpScore = evaluate(&tmp, cleaning);
+		float tmpScore = evaluate(&tmp);
 		maxScore = (tmpScore > maxScore) ? tmpScore : maxScore;
 		tmp = node->myState;
 		shift(&tmp, Down);
-		tmpScore = evaluate(&tmp, cleaning);
+		tmpScore = evaluate(&tmp);
 		maxScore = (tmpScore > maxScore) ? tmpScore : maxScore;
 		tmp = node->myState;
 		shift(&tmp, Left);
-		tmpScore = evaluate(&tmp, cleaning);
+		tmpScore = evaluate(&tmp);
 		maxScore = (tmpScore > maxScore) ? tmpScore : maxScore;
 		return maxScore;
 	}
@@ -155,10 +188,10 @@ float evaluateTree(lookaheadTree *node, bool cleaning)
 
 	for (uint32_t i = 0; i < node->numLeaves; i += 4)
 	{
-		upScore += evaluateTree(node->leaves + i, cleaning);
-		rightScore += evaluateTree(node->leaves + i + 1, cleaning);
-		downScore += evaluateTree(node->leaves + i + 2, cleaning);
-		leftScore += evaluateTree(node->leaves + i + 3, cleaning);
+		upScore += evaluateTree(node->leaves + i);
+		rightScore += evaluateTree(node->leaves + i + 1);
+		downScore += evaluateTree(node->leaves + i + 2);
+		leftScore += evaluateTree(node->leaves + i + 3);
 	}
 
 	float udMax = (upScore > downScore)  ? upScore : downScore;
@@ -194,7 +227,6 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verb
 	float bestFitness;
 	dirType myMove;
 	uint32_t numOptions;
-	bool cleaning;
 	uint32_t myDepth;
 
 	game = (diveState) {{0}, {2}, 1, 2, 2, 2, 0, 16, false};
@@ -219,22 +251,20 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verb
 
 	while(!game.gameOver)
 	{
-		if (game.score < 10000)
+		if (game.score < DEPTH_1_SCORE)
 			myDepth = depth;
-		else if (game.score < 100000)
+		else if (game.score < DEPTH_2_SCORE)
 			myDepth = (depth > 1) ? depth : 1;
 		else
 			myDepth = (depth > 2) ? depth : 2;
 
 		bestFitness = -1.0;
 		for (uint32_t i = 0; i < 4; ++i)
-		{
-			cleaning = myTree[i].myState.score < 626;
-			
+		{			
 			if (myDepth > 0)
 				computeToDepth(myTree + i, myDepth);
 
-			fitness[i] = evaluateTree(myTree + i, cleaning);
+			fitness[i] = evaluateTree(myTree + i);
 
 			if (fitness[i] > bestFitness)
 			{

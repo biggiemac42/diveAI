@@ -50,18 +50,25 @@ int main(int argc, char **argv)
 
 
 	srand(seed);
-	uint32_t aiScore = 0;
+	uint64_t totalScore = 0;
 	uint32_t aiHighScore = 0;
 	uint32_t n10k = 0;
 	uint32_t *summary;
 	uint32_t score;
 	uint32_t nthMove;
+
+	printf("Generating lookup table...\n\n");
+
+	populateHelpList(); // Greatly speeds up future eval calls;
 	
 	for (int g = 0; g < ngames; ++g)
 	{
+		if (g % 100000 == 0)
+			printf("%d/%d complete\n", g, ngames);
+
 		summary = playGame(&score, &nthMove, depth, verbose);
 
-		aiScore += score;
+		totalScore += score;
 		aiHighScore = (aiHighScore > score) ? aiHighScore : score;
 		if (score > 10000)
 			++n10k;
@@ -75,12 +82,17 @@ int main(int argc, char **argv)
 			fclose(f);
 		}
 
-		free(summary);
-	}
+		if (g % 10 == 9)
+		{
+			printf("\033[%dA\r", 3);
+			printf("Mean : %lu                \n", totalScore / (g+1));
+			printf("Highest: %d   \n", aiHighScore);
+			printf("10K games: %d / %d (%.1f%%)\n", n10k, (g+1), (double)n10k / (g+1) * 100);
+		}
 
-	printf("Mean : %d\n", aiScore / ngames);
-	printf("Highest: %d\n", aiHighScore);
-	printf("10K games: %d / %d", n10k, ngames);
+		free(summary);
+
+	}
 
 	return 0;
 }

@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS = -Wall -O3 -g -std=c99
+CFLAGS = -Wall -O3 -g -std=c99 -lm
 DEPS = src/dive.h src/AI.h
 AIOBJS = src/dive.o src/AI.o src/diveAI.o
 REPLAYOBJS = src/dive.o src/replay.o

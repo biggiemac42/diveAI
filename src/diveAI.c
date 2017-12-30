@@ -57,15 +57,12 @@ int main(int argc, char **argv)
 	uint32_t score;
 	uint32_t nthMove;
 
-	printf("Generating lookup table...\n\n");
+	printf("Generating lookup table...\n\n\n");
 
 	populateHelpList(); // Greatly speeds up future eval calls;
 	
 	for (int g = 0; g < ngames; ++g)
 	{
-		if (g % 100000 == 0)
-			printf("%d/%d complete\n", g, ngames);
-
 		summary = playGame(&score, &nthMove, depth, verbose);
 
 		totalScore += score;

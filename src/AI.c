@@ -13,19 +13,23 @@ static uint32_t DEPTH_1_SCORE = 10000;
 static uint32_t DEPTH_2_SCORE = 100000;
 
 
-/* The board's score when evaluated is the weighted sum of 4 quantities:
+/* The board's score when evaluated is the weighted sum of 5 quantities:
  * number of empty tiles
  * inverse seed count
- *
  * a function of biggest seed
+ * a function of second biggest seed
  * a function of score
+ *
+ * The intention is to encourage games with exactly one big seed, so the weight
+ * on the second biggest seed is negative.
  */
 static float EMPTY_TILE_WEIGHT = 70.0;
 static float INV_SEED_COUNT_WEIGHT = 3100.0;
 static float BIGGEST_SEED_WEIGHT = 2.5;
+static float SECOND_SEED_WEIGHT = -2.0;
 static float SCORE_WEIGHT = 1.0;
 
-/* The function for seed and score behavies linearly for small values and logarithmic
+/* The function for seeds and score behavies linearly for small values and logarithmic
  * asymptotically.  We precompute all values below 100k, and then call this function
  * for higher values */
 
@@ -153,10 +157,11 @@ float evaluate(diveState *myState)
 	if (myState->gameOver)
 		return 0.0;
 	else
-		return SCORE_WEIGHT * linlog(myState->score) +
-			   BIGGEST_SEED_WEIGHT * linlog(myState->biggestSeed) +
-	           EMPTY_TILE_WEIGHT * myState->emptyTiles +
-	           INV_SEED_COUNT_WEIGHT / myState->numSeeds;
+		return SCORE_WEIGHT * linlog(myState->score)
+			 + BIGGEST_SEED_WEIGHT * linlog(myState->biggestSeed)
+			 + SECOND_SEED_WEIGHT * linlog(myState->secondBiggestSeed)
+	         + EMPTY_TILE_WEIGHT * myState->emptyTiles
+	         + INV_SEED_COUNT_WEIGHT / myState->numSeeds;
 }
 
 float evaluateTree(lookaheadTree *node)

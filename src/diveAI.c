@@ -23,10 +23,11 @@ int main(int argc, char **argv)
 	uint32_t depth = 0;
 	uint32_t seed = time(NULL);
 	bool verbose = false;
+	bool canReset = false;
 
 	char opt;
 
-	while ((opt=getopt(argc,argv,"n:d:s:vh"))!=-1)
+	while ((opt=getopt(argc,argv,"n:d:s:vrh"))!=-1)
 	{
         switch (opt)
         {
@@ -42,11 +43,14 @@ int main(int argc, char **argv)
             case 'v': // Verbosity
                 verbose = true;
             break;
+            case 'r': // Allowed to reset
+            	canReset = true;
+            break;
             case 'h':
-            	printf("Usage: %s [-n ngames] [-d depth] [-s seed] [-v]\n", argv[0]);
+            	printf("Usage: %s [-n ngames] [-d depth] [-s seed] [-v] [-r]\n", argv[0]);
             	return 0;
             case '?':
-                printf("Usage: %s [-n ngames] [-d depth] [-s seed] [-v]\n", argv[0]);
+                printf("Usage: %s [-n ngames] [-d depth] [-s seed] [-v] [-r]\n", argv[0]);
                 return 1;
             default:
                 return 0;
@@ -71,18 +75,25 @@ int main(int argc, char **argv)
 	populateHelpList(); // Greatly speeds up future eval calls;
 
 	printf("\033[%dA\r", 1);
-	printf("Running games...           \n\n\n");
+	if (canReset)
+		printf("Running games with resets until %d completed... \n\n\n\n", ngames);
+	else
+		printf("Running %d games...           \n\n\n", ngames);
+
+	if (verbose)
+		printf("\n\n\n\n\n\n\n\n");
+
 
 	//FILE *q = fopen("movescore.txt", "w");
 	
 	for (int g = 0; g < ngames;)
 	{
-		summary = playGame(&score, &nthMove, depth, verbose, &nResets);
+		summary = playGame(&score, &nthMove, depth, verbose, &nResets, canReset);
 
 		totalScore += score;
 		aiHighScore = (aiHighScore > score) ? aiHighScore : score;
 
-		if (score > 5000000)
+		if (score > 5000000) // Print 5 million + point games to file by default
 		{
 			char filename[32];
 			sprintf(filename, "Game%d.txt", score);
@@ -96,14 +107,24 @@ int main(int argc, char **argv)
 
 		if (!verbose && g % updateInterval == 0)
 		{
-			printf("\033[%dA\r", 3);
+			printf("\033[%dA\r", canReset ? 3 : 2);
 			printf("Mean: %lu                \n", totalScore / g);
 			printf("Highest: %u   \n", aiHighScore);
-			printf("Completed: %d / %u (%.1f%%)\n", g, nResets + g, (double) g / (nResets + g) * 100);
+			if (canReset)
+				printf("Completed: %d / %u (%.1f%%)\n", g, nResets + g, (double) g / (nResets + g) * 100);
 		}
 
 		free(summary);
 
+	}
+
+	if (verbose)
+	{
+		printf("Summary:\n");
+		printf("Mean: %lu                \n", totalScore / ngames);
+		printf("Highest: %u   \n", aiHighScore);
+		if (canReset)
+			printf("Completed: %d / %u (%.1f%%)\n", ngames, nResets + ngames, (double) ngames / (nResets + ngames) * 100);
 	}
 
 	//fclose(q);

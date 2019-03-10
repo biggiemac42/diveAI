@@ -4,12 +4,13 @@
 
 void printBoard(diveState myState)
 {
-	printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\nScore: %d\n\n", myState.score);
+	printf("\033[%dA\r",6);
+	printf("\033[2K");
+	printf("\033[%dA\r",2);
+	printf("Score: %-9d\n\n", myState.score);
 	printf("Seeds: ");
 	for (uint32_t i = 0; i < myState.numSeeds; ++i)
 		printf("%d ", myState.seeds[i]);
-
-
 	printf("\n");
 	for (uint32_t i = 0; i < 16; ++i)
 	{

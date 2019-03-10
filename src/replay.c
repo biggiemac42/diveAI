@@ -43,6 +43,7 @@ int main(int argc, char **argv)
 	fgets(buffer, 10, f);
 	spawn = atoi(buffer);
 	game = options[spawn];
+	printf("\n\n\n\n\n\n\n\n\n");
 	printBoard(game);
 
 	while(fgets(buffer, 10, f) != NULL)

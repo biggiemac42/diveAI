@@ -220,7 +220,7 @@ static uint32_t MAX_NUM_MOVES = 10000;
 /* Returns the intlist directly, and score and number of moves
  * indirectly.
  */
-uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verbose, uint32_t *resetTicker)
+uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verbose, uint32_t *resetTicker, bool canReset)
 {
 	uint32_t *summary;
 	diveState *options;
@@ -257,7 +257,7 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verb
 
 	while(!game.gameOver)
 	{
-		if (game.score < 25000 && game.emptyTiles < 4)
+		if (canReset && game.score < 25000 && game.emptyTiles < 4)
 		{
 			++(*resetTicker);
 			free(summary);

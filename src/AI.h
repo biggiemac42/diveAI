@@ -48,6 +48,6 @@ void addChildren(lookaheadTree *parent);
 void computeToDepth(lookaheadTree *root, uint32_t depth);
 float evaluate(diveState *myState);
 float evaluateTree(lookaheadTree *node);
-uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verbose, uint32_t *resetTicker);
+uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verbose, uint32_t *resetTicker, bool canReset);
 
 #endif

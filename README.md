@@ -1,12 +1,12 @@
 # diveAI
 
-A C reimplementation of the game DIVE, from https://alexfink.github.io/dive and an associated expectimax AI.
+A C reimplementation of the game DIVE, from https://alexfink.github.io/dive and an associated expectimax AI.  The AI uses a lookahead.  Before committing to any move, it will calculate all possible board positions after some number of moves and spawns, and use that to inform its committed move.  By default, the AI will start out considering board states which come from making two moves, but without considering newly spawned tiles at all.  This is referred to as depth 0.  Once it breaks 6500 points, it increases to depth 1, which considers one move, one random spawn, and then two moves.  Once it breaks 250000 points, it increases to depth 2, which considers move, spawn, move, spawn, move, move.  The combinatorial explosion of possibility means an increase in depth is a large increase in complexity, and these values have been tuned to minimize the mean computational time between completing million point games.
 
 Usage: `./diveAI [-n ngames] [-d depth] [-s seed] [-v] [-r]`
 
-ngames: the AI will play games until it has completed this many games.  The implication for runtime depends strongly on the other arguments.
+ngames: the AI will play games until it has completed this many games.  The implication for runtime depends strongly on the other arguments.  Default is 100 games.
 
-depth: The program runs using a lookahead.  Before committing to any move, it will calculate all possible board positions after some number of moves and spawns, and use that to inform its committed move.  By default, the game will start out considering board states which come from making two moves, but without considering newly spawned tiles at all.  This is depth 0.  Once it breaks 6500 points, it increases to depth 1, which considers one move, one random spawn, and then two moves.  Once it breaks 250000 points, it increases to depth 2, which considers move, spawn, move, spawn, move, move.  The combinatorial explosion of possibility means an increase in depth is a large increase in complexity, and these values have been tuned to minimize the mean computational time between completing million point games.  If a depth is given as an argument, the 0, 1, 2 become max(0, depth).  Running games at depth 2 from the start makes for a speed which is comfortable to view, and these games generally average over 10000 points.
+depth: if a depth is given as an argument, the 0, 1, 2 become max(0, depth), max(1, depth), max(2, depth) respectively.  Running games at depth 2 from the start makes for a speed which is comfortable to view, and these games generally average over 10000 points.
 
 seed: The default seed is time(NULL), but one can set a seed for the random number generator for determinstic play.
 

@@ -1,16 +1,15 @@
 #include "AI.h"
 
-//#include <stdio.h> // debugging
+#include <stdio.h> // debugging
 #include <math.h> // to have other options in eval
-
 
 /* The tuning knobs for the eval function are defined here as constants */
 
 /* Above this score the depth takes on a minumum of 1. */
-static uint32_t DEPTH_1_SCORE = 10000;
+static uint32_t DEPTH_1_SCORE = 6500;
 
 /* Above this score the depth takes on a minimum of 2. */
-static uint32_t DEPTH_2_SCORE = 100000;
+static uint32_t DEPTH_2_SCORE = 250000;
 
 
 /* The board's score when evaluated is the weighted sum of 5 quantities:
@@ -25,9 +24,9 @@ static uint32_t DEPTH_2_SCORE = 100000;
  */
 static float EMPTY_TILE_WEIGHT = 70.0;
 static float INV_SEED_COUNT_WEIGHT = 3100.0;
-static float BIGGEST_SEED_WEIGHT = 2.5;
-static float SECOND_SEED_WEIGHT = -2.0;
-static float SCORE_WEIGHT = 1.0;
+static float BIGGEST_SEED_WEIGHT = 1.5;
+static float SECOND_SEED_WEIGHT = -1.0;
+static float SCORE_WEIGHT = 8.0;
 
 /* The function for seeds and score behavies linearly for small values and logarithmic
  * asymptotically.  We precompute all values below 100k, and then call this function
@@ -36,7 +35,7 @@ static float SCORE_WEIGHT = 1.0;
 float linloghelper(uint32_t value)
 {
 	float x = (float) value;
-	return 1000*(x/(x+1000) + log(x+1000) - log(1000));
+	return 1000*(3*x/(x+1000) + log(x+1000) - log(1000));
 }
 
 static float linlogHelpList[100000];
@@ -221,11 +220,11 @@ static uint32_t MAX_NUM_MOVES = 10000;
 /* Returns the intlist directly, and score and number of moves
  * indirectly.
  */
-uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verbose)
+uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verbose, uint32_t *resetTicker)
 {
 	uint32_t *summary;
-	diveState game;
 	diveState *options;
+	diveState game;
 	lookaheadTree myTree[4];
 	lookaheadTree temp;
 	float fitness[4];
@@ -234,6 +233,8 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verb
 	uint32_t numOptions;
 	uint32_t myDepth;
 
+
+	reset: 
 	game = (diveState) {{0}, {2}, 1, 2, 2, 2, 0, 16, false};
 	*nthMove = 0;
 	summary = malloc(MAX_NUM_MOVES * sizeof *summary);
@@ -256,6 +257,12 @@ uint32_t *playGame(uint32_t *score, uint32_t *nthMove, uint32_t depth, bool verb
 
 	while(!game.gameOver)
 	{
+		if (game.score < 25000 && game.emptyTiles < 4)
+		{
+			++(*resetTicker);
+			free(summary);
+			goto reset;
+		}
 		if (game.score < DEPTH_1_SCORE)
 			myDepth = depth;
 		else if (game.score < DEPTH_2_SCORE)

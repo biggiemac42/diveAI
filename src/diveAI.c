@@ -13,7 +13,9 @@
 #include <stdbool.h>
 #include <string.h>
 #include <getopt.h>
+#include <math.h>
 #include <time.h>
+
 
 int main(int argc, char **argv)
 {
@@ -24,7 +26,7 @@ int main(int argc, char **argv)
 
 	char opt;
 
-	while ((opt=getopt(argc,argv,"n:d:s:v"))!=-1)
+	while ((opt=getopt(argc,argv,"n:d:s:vh"))!=-1)
 	{
         switch (opt)
         {
@@ -40,36 +42,47 @@ int main(int argc, char **argv)
             case 'v': // Verbosity
                 verbose = true;
             break;
+            case 'h':
+            	printf("Usage: %s [-n ngames] [-d depth] [-s seed] [-v]\n", argv[0]);
+            	return 0;
             case '?':
+                printf("Usage: %s [-n ngames] [-d depth] [-s seed] [-v]\n", argv[0]);
                 return 1;
             default:
-                printf("Usage: %s [-n ngames] [-d depth] [-s seed] [-v]", argv[0]);
                 return 0;
 		}
 	}
 
+	uint32_t updateInterval = 1;
 
 	srand(seed);
 	uint64_t totalScore = 0;
 	uint32_t aiHighScore = 0;
-	uint32_t n10k = 0;
 	uint32_t *summary;
 	uint32_t score;
 	uint32_t nthMove;
+	uint32_t nResets;
 
-	printf("Generating lookup table...\n\n\n");
+
+
+
+	printf("Generating lookup table...\n");
 
 	populateHelpList(); // Greatly speeds up future eval calls;
+
+	printf("\033[%dA\r", 1);
+	printf("Running games...           \n\n\n");
+
+	//FILE *q = fopen("movescore.txt", "w");
 	
-	for (int g = 0; g < ngames; ++g)
+	for (int g = 0; g < ngames;)
 	{
-		summary = playGame(&score, &nthMove, depth, verbose);
+		summary = playGame(&score, &nthMove, depth, verbose, &nResets);
 
 		totalScore += score;
 		aiHighScore = (aiHighScore > score) ? aiHighScore : score;
-		if (score > 10000)
-			++n10k;
-		if (score > 1000000)
+
+		if (score > 5000000)
 		{
 			char filename[32];
 			sprintf(filename, "Game%d.txt", score);
@@ -79,17 +92,22 @@ int main(int argc, char **argv)
 			fclose(f);
 		}
 
-		if (g % 10 == 9)
+		++g;
+
+		if (!verbose && g % updateInterval == 0)
 		{
 			printf("\033[%dA\r", 3);
-			printf("Mean : %lu                \n", totalScore / (g+1));
-			printf("Highest: %d   \n", aiHighScore);
-			printf("10K games: %d / %d (%.1f%%)\n", n10k, (g+1), (double)n10k / (g+1) * 100);
+			printf("Mean: %lu                \n", totalScore / g);
+			printf("Highest: %u   \n", aiHighScore);
+			printf("Completed: %d / %u (%.1f%%)\n", g, nResets + g, (double) g / (nResets + g) * 100);
 		}
 
 		free(summary);
 
 	}
+
+	//fclose(q);
+
 
 	return 0;
 }

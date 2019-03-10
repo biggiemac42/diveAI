@@ -10,6 +10,7 @@
 #endif
 
 #include <stdio.h>
+#include <string.h>
 
 #include "dive.h"
 
@@ -28,6 +29,12 @@ int main(int argc, char **argv)
 	uint32_t numOptions;
 
 	FILE *f = fopen(argv[1], "r");
+	char traj[60];
+	strcpy(traj, "traj ");
+	strcat(traj, argv[1]);
+	strcat(traj, ".csv");
+	//FILE *q = fopen(traj, "w");
+
 	options = spawnOptions(game, &numOptions);
 	fgets(buffer, 10, f);
 	spawn = atoi(buffer);
@@ -48,6 +55,7 @@ int main(int argc, char **argv)
 		if (spawn > numOptions)
 			return 1;
 		game = options[spawn];
+		//fprintf(q, "%d,%d\n", game.numSeeds, game.emptyTiles);
 		printBoard(game);
 		Sleep(400);
 	}

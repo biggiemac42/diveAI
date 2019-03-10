@@ -5,3 +5,7 @@ replay
 *.txt
 *.STACKDUMP
 src/*.o
+*.csv
+*.exe
+*.nb
+*.png

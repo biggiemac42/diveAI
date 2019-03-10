@@ -100,6 +100,8 @@ void updateSeeds(diveState *myState)
 			else if (seed > myState->secondBiggestSeed)
 				myState->secondBiggestSeed = seed;
 		}
+		else
+			myState->score += myState->seeds[i]; // Eliminated is worth points apparently
 
 	/* bookkeepping to make sure we don't unlock the same seed twice in a turn */
 	uint32_t remaining = newNumSeeds;
@@ -147,15 +149,16 @@ void shift(diveState *myState, dirType dir)
 
 	for (uint32_t i = 0; i < 16; i += 4) {
 		uint32_t top = i;
+		uint32_t topDir = getIndex(top, dir);
 		for (uint32_t j = 0; j < 4; ++j)
 		{
 			uint32_t val = myState->board[getIndex(i + j, dir)];
 			if (!val)
 				continue;
-			uint32_t newVal = newBoard[getIndex(top, dir)];
+			uint32_t newVal = newBoard[topDir];
 			if (!newVal)
 			{
-				newBoard[getIndex(top, dir)] = val;
+				newBoard[topDir] = val;
 				myState->emptyTiles -= 1;
 			}
 			else {
@@ -163,12 +166,14 @@ void shift(diveState *myState, dirType dir)
 				uint32_t min = newVal < val ? newVal : val;
 				if (max % min)
 				{
-					newBoard[getIndex(++top, dir)] = val;
+					topDir = getIndex(++top, dir);
+					newBoard[topDir] = val;
 					myState->emptyTiles -= 1;
 				}
 				else
 				{
-					newBoard[getIndex(top++, dir)] += val;
+					newBoard[topDir] += val;
+					topDir = getIndex(++top, dir);
 					myState->score += min;
 					dirty = true;
 				}
